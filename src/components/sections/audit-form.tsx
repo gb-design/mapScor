@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AuditResult } from "./audit-result";
 
 const questions = [
   {
@@ -119,11 +120,30 @@ const questions = [
   },
 ];
 
+const loadingSteps = [
+  "Calculating category scores...",
+  "Analyzing profile completeness...",
+  "Evaluating photo presence...",
+  "Checking review health...",
+  "Assessing posting activity...",
+  "Generating AI recommendations...",
+];
+
 export function AuditForm() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [complete, setComplete] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    score: {
+      overall: number;
+      categories: { name: string; score: number; weight: number; weightLabel: string }[];
+      businessName: string;
+      businessType: string;
+    };
+    recommendations: { priority: "high" | "medium" | "low"; title: string; description: string }[];
+  } | null>(null);
 
   const current = questions[step];
   const isFirst = step === 0;
@@ -135,9 +155,17 @@ export function AuditForm() {
       ? (answers[current.id] || "").trim().length > 0
       : !!answers[current.id];
 
+  // Animate loading steps
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setLoadingStep((s) => (s < loadingSteps.length - 1 ? s + 1 : s));
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [loading]);
+
   const handleSelect = (value: string) => {
     setAnswers((prev) => ({ ...prev, [current.id]: value }));
-    // Auto-advance for select questions
     if (!isLast) {
       setTimeout(() => setStep((s) => s + 1), 300);
     }
@@ -145,49 +173,82 @@ export function AuditForm() {
 
   const handleSubmit = async () => {
     setLoading(true);
-    // Simulate audit processing
-    await new Promise((r) => setTimeout(r, 2500));
-    setComplete(true);
-    setLoading(false);
+    setLoadingStep(0);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Audit failed");
+      }
+
+      const data = await res.json();
+      setResult(data);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (complete) {
+  const handleReset = () => {
+    setStep(0);
+    setAnswers({});
+    setResult(null);
+    setError(null);
+  };
+
+  // Show result
+  if (result) {
     return (
-      <section id="audit" className="py-24 sm:py-32 bg-surface/50">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-dim border border-green-mid mb-6"
-          >
-            <CheckCircle2 size={40} className="text-green" />
-          </motion.div>
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">
-            Audit Complete!
-          </h2>
-          <p className="text-text2 mb-8">
-            Your Google Business Profile score for{" "}
-            <span className="font-medium text-text">
-              {answers.business_name}
-            </span>{" "}
-            is ready.
-          </p>
-          <p className="text-sm text-muted">
-            Full result page with AI recommendations coming soon — we&apos;re still in
-            early access.
-          </p>
-        </div>
-      </section>
+      <AuditResult
+        score={result.score}
+        recommendations={result.recommendations}
+        onReset={handleReset}
+      />
     );
   }
 
+  // Loading state
   if (loading) {
     return (
       <section id="audit" className="py-24 sm:py-32 bg-surface/50">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 text-center">
-          <Loader2 size={40} className="text-green mx-auto mb-6 animate-spin" />
-          <h2 className="text-2xl font-bold mb-2">Analyzing your profile...</h2>
-          <p className="text-text2">AI is evaluating 7 key categories</p>
+        <div className="mx-auto max-w-md px-4 sm:px-6 text-center">
+          <Loader2
+            size={40}
+            className="text-green mx-auto mb-8 animate-spin"
+          />
+          <h2 className="text-2xl font-bold mb-6">
+            Analyzing your profile...
+          </h2>
+          <div className="space-y-3 text-left">
+            {loadingSteps.map((s, i) => (
+              <div
+                key={s}
+                className={`flex items-center gap-3 text-sm transition-all duration-300 ${
+                  i < loadingStep
+                    ? "text-green"
+                    : i === loadingStep
+                    ? "text-text"
+                    : "text-hint"
+                }`}
+              >
+                {i < loadingStep ? (
+                  <CheckCircle2 size={16} className="text-green shrink-0" />
+                ) : i === loadingStep ? (
+                  <Loader2 size={16} className="animate-spin shrink-0" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-hint/30 shrink-0" />
+                )}
+                {s}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );
@@ -222,6 +283,13 @@ export function AuditForm() {
           </div>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="mb-4 rounded-xl border border-red/20 bg-red-dim px-4 py-3 text-sm text-red">
+            {error}
+          </div>
+        )}
+
         {/* Question */}
         <div className="rounded-2xl border border-border bg-card p-8">
           <AnimatePresence mode="wait">
@@ -249,8 +317,12 @@ export function AuditForm() {
                   placeholder={current.placeholder}
                   className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-text placeholder:text-hint focus:outline-none focus:border-green/50 focus:ring-1 focus:ring-green/25 transition-colors"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && canAdvance && !isLast) {
-                      setStep((s) => s + 1);
+                    if (e.key === "Enter" && canAdvance) {
+                      if (isLast) {
+                        handleSubmit();
+                      } else {
+                        setStep((s) => s + 1);
+                      }
                     }
                   }}
                   autoFocus

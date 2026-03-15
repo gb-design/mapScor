@@ -1,6 +1,7 @@
 # mapScor — Claude Project Memory
 
 ## Projekt-Identität
+
 **Name:** mapScor  
 **Tagline:** AI Audit Tool für Google Business Profiles  
 **Domain:** mapscor.io (geplant)  
@@ -10,8 +11,10 @@
 ---
 
 ## Was ist mapScor?
+
 Ein KI-gestütztes Audit-Tool für Google Business Profiles (GBP).  
 Nutzer geben ihre GBP-URL ein, wählen ein AI-Modell, und erhalten:
+
 - Einen Score von 0–100
 - Priorisierte Optimierungsvorschläge (High / Medium / Low Impact)
 - Konkrete nächste Schritte
@@ -22,9 +25,11 @@ Nutzer geben ihre GBP-URL ein, wählen ein AI-Modell, und erhalten:
 ---
 
 ## Kostenphilosophie (KRITISCH)
+
 George möchte die laufenden Kosten in Phase 1 so niedrig wie möglich halten.
 
 **Kostenstrategie:**
+
 - **Hosting:** Vercel Free Tier (kein Upgrade bis nötig)
 - **Datenbank:** Supabase Free Tier (500MB, ausreichend für Phase 1)
 - **AI für Free Users:** Groq Free API (Llama 3.3 70B, kostenlos mit Rate Limit) + Google Gemini Free Tier
@@ -41,6 +46,7 @@ George möchte die laufenden Kosten in Phase 1 so niedrig wie möglich halten.
 ## Technologie-Stack
 
 ### Frontend
+
 - **Framework:** Next.js 14+ (App Router)
 - **Styling:** Tailwind CSS v3
 - **Fonts:** Syne (Headings) + DM Sans (Body) — Google Fonts, kostenlos
@@ -49,22 +55,25 @@ George möchte die laufenden Kosten in Phase 1 so niedrig wie möglich halten.
 - **Icons:** Lucide React
 
 ### Backend
+
 - **API Routes:** Next.js API Routes (Serverless, kostenlos auf Vercel)
 - **AI SDK:** Vercel AI SDK (unified interface für alle Modelle)
 - **Auth (Phase 2):** Supabase Auth
 - **DB (Phase 2):** Supabase Postgres
 
 ### AI-Modelle (Phase 1)
-| Modell | Anbieter | Kosten für mapScor | Notizen |
-|--------|----------|-------------------|---------|
-| Llama 3.3 70B | Groq | Kostenlos (Rate Limited) | Default für Free Users |
-| Gemini 1.5 Flash | Google | Kostenlos (15 req/min) | Alternative für Free Users |
-| GPT-4o Mini | OpenAI | User zahlt (BYOK) | |
-| Claude Haiku | Anthropic | User zahlt (BYOK) | |
-| Claude Sonnet | Anthropic | User zahlt (BYOK) | |
-| Gemini Pro | Google | User zahlt (BYOK) | |
+
+| Modell           | Anbieter  | Kosten für mapScor       | Notizen                    |
+| ---------------- | --------- | ------------------------ | -------------------------- |
+| Llama 3.3 70B    | Groq      | Kostenlos (Rate Limited) | Default für Free Users     |
+| Gemini 1.5 Flash | Google    | Kostenlos (15 req/min)   | Alternative für Free Users |
+| GPT-4o Mini      | OpenAI    | User zahlt (BYOK)        |                            |
+| Claude Haiku     | Anthropic | User zahlt (BYOK)        |                            |
+| Claude Sonnet    | Anthropic | User zahlt (BYOK)        |                            |
+| Gemini Pro       | Google    | User zahlt (BYOK)        |                            |
 
 ### Externe APIs (Phase 1)
+
 - **Google Places API:** NICHT verwendet in Phase 1 — bewusste Entscheidung zur Kostenvermeidung ($17/1000 Requests)
 - **Audit-Datenquelle:** Self-Assessment Fragebogen (10 Fragen, User-Eingaben) ersetzt API-Fetching vollständig
 - **Rate Limiting:** Upstash Redis Free Tier (10k requests/Tag) — verhindert API-Missbrauch
@@ -75,6 +84,7 @@ George möchte die laufenden Kosten in Phase 1 so niedrig wie möglich halten.
 ## Design-System
 
 ### Logo
+
 - Datei: `mapscor_logo_2x.png` (vom Owner bereitgestellt, in `/public/logo.png` ablegen)
 - Icon: grüner Stern mit Location-Pin
 - Wortmarke: "map" in Weiß, "scor" in Grün (#00E5A0)
@@ -82,6 +92,7 @@ George möchte die laufenden Kosten in Phase 1 so niedrig wie möglich halten.
 - Hintergrund: immer dunkel (Logo funktioniert nur auf dark bg)
 
 ### Farben
+
 ```
 Background:    #080B0E  (tiefstes Dunkel — AKTUALISIERT)
 Surface:       #0E1215
@@ -106,12 +117,14 @@ Hint:          rgba(200,205,214,0.28)
 ```
 
 ### Typografie
+
 - **Alle Texte:** Space Grotesk (Google Fonts) — weights 300, 400, 500, 600, 700
 - **Mono:** JetBrains Mono (für Code/API Keys)
 - Kein Font-Mix — Space Grotesk übernimmt Headings und Body
 - Warum Space Grotesk: expliziter Wunsch des Owners
 
 ### Design-Prinzipien
+
 - Dark-only (kein Light Mode in Phase 1)
 - Subtiles Noise-Texture Overlay im Body (CSS SVG feTurbulence, opacity ~0.5)
 - Feines Grid-Pattern im Hero (CSS linear-gradient, mask-image radial-gradient)
@@ -126,21 +139,22 @@ Hint:          rgba(200,205,214,0.28)
 
 ## Score-Algorithmus (v1)
 
-| Kategorie | Gewichtung | Was wird geprüft |
-|-----------|-----------|-----------------|
-| Vollständigkeit | 25% | Name, Adresse, Telefon, Website, Beschreibung, Kategorien, Attribute |
-| Foto-Qualität & -Anzahl | 20% | Anzahl Fotos, Logo vorhanden, Cover-Foto |
-| Review-Qualität | 20% | Durchschnitt, Anzahl, Aktualität, Antwortrate |
-| Posts & Aktivität | 15% | Letzter Post, Posting-Frequenz |
-| Keywords & Beschreibung | 10% | Relevante Keywords, Beschreibungslänge, lokale Terme |
-| Öffnungszeiten | 5% | Vollständig, Sonderzeiten, Feiertage |
-| Q&A | 5% | Vorhanden, beantwortet |
+| Kategorie               | Gewichtung | Was wird geprüft                                                     |
+| ----------------------- | ---------- | -------------------------------------------------------------------- |
+| Vollständigkeit         | 25%        | Name, Adresse, Telefon, Website, Beschreibung, Kategorien, Attribute |
+| Foto-Qualität & -Anzahl | 20%        | Anzahl Fotos, Logo vorhanden, Cover-Foto                             |
+| Review-Qualität         | 20%        | Durchschnitt, Anzahl, Aktualität, Antwortrate                        |
+| Posts & Aktivität       | 15%        | Letzter Post, Posting-Frequenz                                       |
+| Keywords & Beschreibung | 10%        | Relevante Keywords, Beschreibungslänge, lokale Terme                 |
+| Öffnungszeiten          | 5%         | Vollständig, Sonderzeiten, Feiertage                                 |
+| Q&A                     | 5%         | Vorhanden, beantwortet                                               |
 
 **Gesamtscore:** Gewichteter Durchschnitt → 0–100
 
 ---
 
 ## Projektstruktur (Monorepo)
+
 ```
 mapscor/
 ├── CLAUDE.md                    ← Diese Datei
@@ -177,6 +191,7 @@ mapscor/
 ---
 
 ## Umgebungsvariablen (.env.local)
+
 ```bash
 # Google Places API (sparsam verwenden!)
 GOOGLE_PLACES_API_KEY=
@@ -201,6 +216,7 @@ UPSTASH_REDIS_REST_TOKEN=
 ## Phasen-Übersicht
 
 ### Phase 1 — Landing Page + Free Audit (aktuell)
+
 - [ ] Next.js Projekt Setup (App Router, TypeScript, Tailwind, Space Grotesk)
 - [ ] Design System implementieren (CSS Variables, Logo, Dark Mode)
 - [ ] Landing Page — alle Sektionen:
@@ -224,6 +240,7 @@ UPSTASH_REDIS_REST_TOKEN=
 - [ ] Deployment auf Vercel
 
 ### Phase 2 — Dashboard + Pro (nach Phase 1)
+
 - [ ] Supabase Setup (Auth + DB)
 - [ ] Pro Dashboard
 - [ ] Stripe Integration
@@ -261,6 +278,7 @@ Kein Google Places API Key nötig, €0 Betriebskosten in Phase 1. User reflekti
 ---
 
 ## Kontakt & Kontext
+
 - Owner: George, gesign.art, Wien
 - Ähnliches Produkt: localhq.io (Referenz/Wettbewerb)
 - Valibelle (handmade resin shop in Wien) — möglicher erster Testnutzer
