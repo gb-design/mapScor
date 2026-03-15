@@ -1,11 +1,44 @@
 import { generateText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import { calculateScore, type AuditAnswers } from "@/lib/scoring/calculate";
+import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
+
+const redisClient = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+const limiter = new Ratelimit({
+  redis: redisClient,
+  limiter: Ratelimit.slidingWindow(5, "1 d"),
+  prefix: "mapscor:audit",
+});
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      "anonymous";
+
+    const { success, limit, remaining } = await limiter.limit(ip);
+
+    if (!success) {
+      return Response.json(
+        { error: "Too many audits. You can run 5 free audits per day." },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": String(limit),
+            "X-RateLimit-Remaining": String(remaining),
+          },
+        }
+      );
+    }
+
     const body = await req.json();
     const answers = body.answers as AuditAnswers;
 
@@ -19,7 +52,6 @@ export async function POST(req: Request) {
     // Generate AI recommendations
     const groqKey = process.env.GROQ_API_KEY;
     if (!groqKey) {
-      // Return score without AI recommendations if no key
       return Response.json({
         score,
         recommendations: [
@@ -77,7 +109,6 @@ Rules:
 
     let recommendations;
     try {
-      // Clean potential markdown wrapping
       const cleaned = text.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
       recommendations = JSON.parse(cleaned);
     } catch {

@@ -183,11 +183,13 @@ export function AuditForm() {
         body: JSON.stringify({ answers }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error("Audit failed");
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
       }
 
-      const data = await res.json();
       setResult(data);
     } catch {
       setError("Something went wrong. Please try again.");
